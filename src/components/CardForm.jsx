@@ -40,7 +40,7 @@ class CardForm extends React.Component {
       return (
         <div>
           <h2>
-            Step 2 - Load your identity
+            Step 1 - Load your identity
           </h2>
           <form onSubmit={this.handleSubmit} >
             <div class="form-group">
@@ -75,7 +75,7 @@ class CardForm extends React.Component {
       return (
         <div>
           <h2>
-            Step 2 - Load your identity
+            Step 1 - Load your identity
           </h2>
           <form onSubmit={this.handleSubmit} >
             <div class="form-group">
@@ -113,7 +113,7 @@ class CardForm extends React.Component {
       return (
         <div>
           <h2>
-            Step 2 - Load your identity
+            Step 1 - Load your identity
           </h2>
           <form onSubmit={this.handleSubmit} >
             <div class="form-group">

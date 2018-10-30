@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import CreditForm from './components/CreditForm';
+import CardForm from './components/CardForm';
 
 
 class Home extends Component {
@@ -10,7 +10,7 @@ class Home extends Component {
           <br />
           <p>Welcome to Caixa Mágica Software DocuSign TSP</p>
           <br />
-        <CreditForm />
+        <CardForm />
       </div>
     );
   }

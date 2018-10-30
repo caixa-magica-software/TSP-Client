@@ -1,22 +1,25 @@
 import React from "react";
 import { BootstrapTable, TableHeaderColumn } from 'react-bootstrap-table';
 import Web3 from 'web3'
+import { Link } from 'react-router-dom';
 import Switch from "react-switch";
 import WallidContract from '../wallid/wallid.js';
-import CMStspContract from '../wallid/CMStsp.js';
+import tspContract from '../wallid/tsp.js';
 var CryptoJS = require("crypto-js");
 
 var Spinner = require('react-spinkit');
 const PASSWORD = "20THIS_WILL_USE_METAMASK_SECURITY18"
 
 const state = {
-  STATE_LOADING_DATA: 0,
-  STATE_LOADING_DATA_FAIL: 1,
-  STATE_ENCRYPTED_DATA: 2,
-  STATE_DECRYPTED_DATA: 3,
-  STATE_VERIFIED_DATA:  4,
-  STATE_SUBMITED_SIGN_DATA: 5,
-  STATE_SUBMITED_DATA: 6
+  STATE_LOADING_HASH: 0,
+  STATE_LOADING_DATA: 1,
+  STATE_LOADING_DATA_FAIL: 2,
+  STATE_ENCRYPTED_DATA: 3,
+  STATE_DECRYPTED_DATA: 4,
+  STATE_VERIFIED_DATA:  5,
+  STATE_SUBMITED_SIGN_DATA: 6,
+  STATE_SUBMITED_DATA: 7,
+  STATE_TRANSACTION_CONFIRMED: 8
 };
 
 window.addEventListener('reload', function () {
@@ -44,9 +47,9 @@ class ImportForm extends React.Component {
       dataIdentityId: '',
       ContractAddress : '0x787e5fc4773cad0c45f287bf00daca402845b1b7',
       ContractInstance : null,
-      CMStspContractInstance : null,
-      CMStspContractAddress : '0x787e5fc4773cad0c45f287bf00daca402845b1b7',
-      CMStspHash : 'QWRyYWlubyBKb8WbZSBSaWJlaXJvIENhbXBvcw==',
+      tspContractAddress : '0x4d2494a62e0b1f30896e7c9d413badef2926b51f',
+      tspContractInstance : null,
+      CMStspHash : '',
       password: PASSWORD,
       passwordCheck: PASSWORD,
       userWa: '',
@@ -64,8 +67,8 @@ class ImportForm extends React.Component {
       const MyContract = window.web3.eth.contract(WallidContract.abi)
       this.state.ContractInstance = MyContract.at(this.state.ContractAddress)
 
-      const MyContractCMStsp = window.web3.eth.contract(CMStspContract.abi)
-      this.state.CMStspContractInstance = MyContract.at(this.state.CMStspContractAddress)
+      const MyContractTsp = window.web3.eth.contract(tspContract.abi)
+      this.state.tspContractInstance = MyContractTsp.at(this.state.tspContractAddress)
 
       // this.state.ContractInstance.countItemList( (err, data) => {
       //   console.log('Count items :  ', data);
@@ -86,13 +89,12 @@ class ImportForm extends React.Component {
           console.log("User is logged in to MetaMask");
           console.log(accounts[0]);
           self.state.userWa = accounts[0];
-          self.callSubmitData();
         }
       });
 
       console.log(self.state.userWa);
 
-      //this.getInfoCrypted();
+      this.getInfoCrypted();
 
     }else {
       alert('No web3? You should consider trying MetaMask!')
@@ -101,7 +103,7 @@ class ImportForm extends React.Component {
 
   handleChange(event) {
     console.log("handleChange");
-    console.log(event.target.name + event.target.value);
+    console.log(event.target.name + " - " + event.target.value);
     this.setState({
       [event.target.name]: event.target.value
     });
@@ -122,6 +124,7 @@ class ImportForm extends React.Component {
         this.getVerify();
       break;
       case state['STATE_VERIFIED_DATA']:
+        this.callSubmitData();
       break;
       default:
       break;
@@ -174,20 +177,62 @@ class ImportForm extends React.Component {
     return str;
   }
 
+  timer(txID) {
+    var self = this
+    window.web3.eth.getTransaction(txID, (err, transaction) => {
+      console.log("Transaction: " + transaction);
+      console.log(transaction);
+      if (transaction.blockNumber == null)
+      {
+        console.log('Not yet! ...');
+      }
+      else
+      {
+        console.log('Last Transaction was confirmed!');
+        clearInterval(self.state.timeoutID);
+        self.state.step = state['STATE_TRANSACTION_CONFIRMED'];
+        self.forceUpdate()
+      }
+    }
+  );
+}
 
   callSubmitData()
   {
-    console.log("******************** callSubmitData *******************************");
+    console.log("******************** call SubmitData *******************************");
       var message = this.state.CMStspHash
+
+      console.log(message);
       console.log(message.toString("hex"));
+
+      var self = this
       window.web3.personal.sign(message.toString("hex"), this.state.userWa, function(err, signature) {
         console.log(signature);
         // Be sure to make use of the signature only here.
         // It will not be defined until this callback is invoked.
+        // QWRyaWFubyBKb3PDqSBDYW1wb3MgQ2FtcG9zIEFkcmlhbm8gSm9zw6kgQ2FtcG9zIENhbXBvcyBBZHJpYW5vIEpvc8OpIENhbXBvcyBDYW1wb3M=
+        console.log(JSON.stringify(signature));
+        var hash = message
+        var hash_meta = JSON.stringify(signature);
+        var metamask_pkey = "document_id_test"
+        var wallet_address = self.state.userWa
+        var document_id = "document_id_test"
 
-        // this.state.CMStspContractAddress.addDocument( hash, hash_meta, metamask_pkey, wallet_address, document_id, (err, data) => {
-        //   console.log('CMStspContractAddress :', data);
-        // });
+        console.log("******************** call addDocument *******************************");
+        self.state.tspContractInstance.addDocument( hash, hash_meta, metamask_pkey, wallet_address, document_id, (err, data) => {
+          console.log('tspContractAddress :', data);
+          if(data){
+            self.state.addinfoSuccess = state['STATE_TRANSACTION_PROCESSING'];
+            self.state.timeoutID = setInterval(self.timer.bind(self), 5000, data);
+            self.forceUpdate()
+          }else{
+            self.state.addinfoSuccess = state['STATE_TRANSACTION_FAIL'];
+            self.state.popupCancel = true
+            self.forceUpdate()
+          }
+        });
+        self.state.step = state['STATE_LOADING_HASH']
+        self.forceUpdate()
       });
   }
   getVerify()
@@ -287,6 +332,8 @@ class ImportForm extends React.Component {
     });
 
     this.state.ContractInstance.EventDataId((err, data) => {
+      console.log("******************** EventDataId *******************************");
+
       console.log('get event data ', data);
       console.log(data["address"]);
       console.log(data["args"]);
@@ -327,6 +374,33 @@ class ImportForm extends React.Component {
           <div>
             <h2>
               Step 3 - Loading data from the blockchain
+            </h2>
+            <br />
+            <div align="center">
+              <h2>
+                Please wait....
+              </h2>
+              <Spinner name="wandering-cubes" color="blue"/>
+            </div>
+            <br />
+          </div>
+        );
+        case state['STATE_TRANSACTION_CONFIRMED']:
+        return (
+          <div>
+            <div className="col text-center successfullyStored">
+              Added signature document to the blockchain succesfully.
+            </div>
+            <div className="col text-center">
+              <div class="pt-2 pb-2">Check the transaction history at Etherscan, pressing <a class="inlineLink" href="https://rinkeby.etherscan.io/address/0x4d2494a62e0b1f30896e7c9d413badef2926b51f" target="_blank rel=noopener">here</a>.</div>
+            </div>
+          </div>
+        );
+        case state['STATE_LOADING_HASH']:
+        return (
+          <div>
+            <h2>
+              Step 3 - Adding signature document to the blockchain
             </h2>
             <br />
             <div align="center">
@@ -510,39 +584,28 @@ class ImportForm extends React.Component {
         case state['STATE_VERIFIED_DATA']:
         return (
           <div>
+            <h2>
+              Step 5 - Introduce the Base64 Hash of the your signature
+            </h2>
+            <form onSubmit={this.handleSubmit}>
               <div class="form-group">
-                <h2>
-                  Step 5 - Submit your application
-                </h2>
-                <p>
-                  Your identity attributes were successfully verified by Wallid.
-                </p>
-                <p>
-                  You can now submit your signature to Caixa Mágica Software DocuSign TSP.
-                </p>
+                <br />
                 <label>
-                  Introduce the Base64 Hash string of the your signature
+                  Introduce the Base64 Hash of the your signature
                 </label>
                 <input
                   type="text"
-                  name="walletAddress"
+                  name="CMStspHash"
                   onChange={this.handleChange}
                   class="form-control"
                   required/>
+                <br />
+                <input
+                  type="submit"
+                  value="Submit" />
               </div>
-              <form onSubmit={this.handleSubmit} >
-                <div class="form-group">
-                  <input
-                    type="submit"
-                    value="Submit" />
-                  <p>
-                    <a href="https://metamask.io/">
-                      what it means?
-                    </a>
-                  </p>
-                </div>
-              </form>
-            </div>
+            </form>
+          </div>
           );
           case state['STATE_SUBMITED_DATA']:
           return (
