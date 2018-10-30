@@ -60,8 +60,14 @@ class CardForm extends React.Component {
                 <option>Cartão de Cidadão - República Portuguesa</option>
               </select>
             </div>
+
             <p>
-              To prove your identity connect with metamask
+              To prove your identity with Wallid connect with metamask
+            </p>
+            <p>
+              <a href="https://www.myetherid.io">
+                What is Wallid?
+              </a>
             </p>
             <Link to ='/Import' >
               <button>
@@ -95,7 +101,7 @@ class CardForm extends React.Component {
               </select>
             </div>
             <p>
-              To prove your identity connect with metamask.
+              To prove your identity with Wallid connect with metamask
             </p>
             <p>
               User logged out? Please login your account at metamask and try again!!
@@ -136,7 +142,7 @@ class CardForm extends React.Component {
               No MetaMask detected.
             </p>
             <p>
-              To prove your identity connect with metamask.
+              To prove your identity with Wallid connect with metamask
             </p>
             <p>
               <a href="https://www.myetherid.io">

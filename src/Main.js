@@ -16,7 +16,7 @@ class Main extends Component {
       <HashRouter>
         <div>
           <ul className="header">
-            <li><NavLink exact to="/">Caixa Mágica Software DocuSign TSP</NavLink></li>
+            <li><NavLink exact to="/">CMS DocuSign TSP</NavLink></li>
             <li><NavLink to="">Help</NavLink></li>
           </ul>
           <div className="content">

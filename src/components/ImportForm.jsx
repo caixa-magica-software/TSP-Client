@@ -17,9 +17,8 @@ const state = {
   STATE_ENCRYPTED_DATA: 3,
   STATE_DECRYPTED_DATA: 4,
   STATE_VERIFIED_DATA:  5,
-  STATE_SUBMITED_SIGN_DATA: 6,
-  STATE_SUBMITED_DATA: 7,
-  STATE_TRANSACTION_CONFIRMED: 8
+  STATE_DOC_SIGNED_DATA: 6,
+  STATE_SUBMITED_DATA: 7
 };
 
 window.addEventListener('reload', function () {
@@ -50,6 +49,7 @@ class ImportForm extends React.Component {
       tspContractAddress : '0x4d2494a62e0b1f30896e7c9d413badef2926b51f',
       tspContractInstance : null,
       CMStspHash : '',
+      CMStspHashSigned : '',
       password: PASSWORD,
       passwordCheck: PASSWORD,
       userWa: '',
@@ -124,7 +124,10 @@ class ImportForm extends React.Component {
         this.getVerify();
       break;
       case state['STATE_VERIFIED_DATA']:
-        this.callSubmitData();
+        this.callSignData();
+      break;
+      case state['STATE_DOC_SIGNED_DATA']:
+        this.callAddDocument();
       break;
       default:
       break;
@@ -159,9 +162,6 @@ class ImportForm extends React.Component {
         this.forceUpdate()
       break;
 
-      case state['STATE_VERIFIED_DATA']:
-      break;
-
       default:
       break;
     }
@@ -190,16 +190,16 @@ class ImportForm extends React.Component {
       {
         console.log('Last Transaction was confirmed!');
         clearInterval(self.state.timeoutID);
-        self.state.step = state['STATE_TRANSACTION_CONFIRMED'];
+        self.state.step = state['STATE_SUBMITED_DATA'];
         self.forceUpdate()
       }
     }
   );
 }
 
-  callSubmitData()
+  callSignData()
   {
-    console.log("******************** call SubmitData *******************************");
+    console.log("******************** call SignData *******************************");
       var message = this.state.CMStspHash
 
       console.log(message);
@@ -211,29 +211,42 @@ class ImportForm extends React.Component {
         // Be sure to make use of the signature only here.
         // It will not be defined until this callback is invoked.
         // QWRyaWFubyBKb3PDqSBDYW1wb3MgQ2FtcG9zIEFkcmlhbm8gSm9zw6kgQ2FtcG9zIENhbXBvcyBBZHJpYW5vIEpvc8OpIENhbXBvcyBDYW1wb3M=
-        console.log(JSON.stringify(signature));
-        var hash = message
-        var hash_meta = JSON.stringify(signature);
-        var metamask_pkey = "document_id_test"
+        console.log("Doc Signature = " + JSON.stringify(signature))
+        self.state.CMStspHashSigned = JSON.stringify(signature)
+        self.state.step = state['STATE_DOC_SIGNED_DATA']
+        self.forceUpdate()
+      });
+  }
+
+  callAddDocument()
+  {
+    console.log("******************** call SubmitData *******************************");
+      var message = this.state.CMStspHash
+
+      console.log(message);
+      console.log(message.toString("hex"));
+
+        var self = this
+
+        var hash =  self.state.CMStspHash
+        var hash_meta = self.state.CMStspHashSigned
+        var metamask_pkey = "metamask_pkey_test"
         var wallet_address = self.state.userWa
         var document_id = "document_id_test"
 
         console.log("******************** call addDocument *******************************");
-        self.state.tspContractInstance.addDocument( hash, hash_meta, metamask_pkey, wallet_address, document_id, (err, data) => {
+        this.state.tspContractInstance.addDocument( hash, hash_meta, metamask_pkey, wallet_address, document_id, (err, data) => {
           console.log('tspContractAddress :', data);
           if(data){
-            self.state.addinfoSuccess = state['STATE_TRANSACTION_PROCESSING'];
             self.state.timeoutID = setInterval(self.timer.bind(self), 5000, data);
             self.forceUpdate()
           }else{
-            self.state.addinfoSuccess = state['STATE_TRANSACTION_FAIL'];
-            self.state.popupCancel = true
+            // TODO: Show popup about Operation fail
             self.forceUpdate()
           }
         });
         self.state.step = state['STATE_LOADING_HASH']
         self.forceUpdate()
-      });
   }
   getVerify()
   {
@@ -373,7 +386,7 @@ class ImportForm extends React.Component {
         return (
           <div>
             <h2>
-              Step 3 - Loading data from the blockchain
+              Step 2 - Loading data from the blockchain
             </h2>
             <br />
             <div align="center">
@@ -385,7 +398,7 @@ class ImportForm extends React.Component {
             <br />
           </div>
         );
-        case state['STATE_TRANSACTION_CONFIRMED']:
+        case state['STATE_SUBMITED_DATA']:
         return (
           <div>
             <div className="col text-center successfullyStored">
@@ -396,11 +409,56 @@ class ImportForm extends React.Component {
             </div>
           </div>
         );
+        case state['STATE_DOC_SIGNED_DATA']:
+        return (
+          <div>
+            <h2>
+              Step 6 - Adding signature document to the blockchain
+            </h2>
+            <br />
+              <label>
+                Your Base64 Hash:
+              </label>
+              <textarea
+                readOnly
+                rows="2"
+                value={this.state.CMStspHash}
+                type="text"
+                name="EncryptedData"
+                class="form-control"
+                />
+              <label>
+                Your document signature:
+              </label>
+              <textarea
+                readOnly
+                rows="2"
+                value={this.state.CMStspHashSigned}
+                type="text"
+                name="EncryptedData"
+                class="form-control"
+                />
+              <br />
+              <form onSubmit={this.handleSubmit} >
+                <div class="form-group">
+                  <input
+                    type="submit"
+                    value="Store document signature" />
+                  <p>
+                    <a href="https://metamask.io/">
+                      what it means?
+                    </a>
+                  </p>
+                </div>
+              </form>
+            <br />
+          </div>
+        );
         case state['STATE_LOADING_HASH']:
         return (
           <div>
             <h2>
-              Step 3 - Adding signature document to the blockchain
+              Step 6 - Adding signature document to the blockchain
             </h2>
             <br />
             <div align="center">
@@ -604,25 +662,13 @@ class ImportForm extends React.Component {
                   type="submit"
                   value="Submit" />
               </div>
+              <p>
+                <a href="https://metamask.io/">
+                  what it means?
+                </a>
+              </p>
             </form>
           </div>
-          );
-          case state['STATE_SUBMITED_DATA']:
-          return (
-            <div>
-              <form>
-                <div class="form-group">
-                  <h2>
-                    Thank you
-                  </h2>
-                  <p>Thank you for applying to a personal credit with CrediBank.</p>
-                  <p>We sent you our official proposal to your email.</p>
-                  <p>
-                    You can now submit your application to personal credit with Credibank.
-                  </p>
-                </div>
-              </form>
-            </div>
           );
           default:
           break;
